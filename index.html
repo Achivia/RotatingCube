@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <title>Three JS - Rotating Cube</title>
     <style>
-    body {
-        margin: 0;
-        overflow: hidden;
-    }
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+        #img-path {
+            display: none;
+        }
     </style>
 </head>
 <body>
+<input id="img-path" type="file" />
     <script src="http://threejs.org/build/three.min.js"></script>
     <script src="http://threejs.org/examples/js/controls/OrbitControls.js"></script>
     <script src="http://threejs.org/examples/js/libs/stats.min.js"></script>
@@ -51,7 +55,6 @@
         );
 
         //LIGHTS
-        // add spotlight for the shadows
         var spotLight = new THREE.SpotLight(0xffffff);
         spotLight.position.set(10, 20, 20);
         spotLight.shadowCameraNear = 10;
@@ -60,41 +63,40 @@
         spotLight.name = 'spot';
         scene.add(spotLight);
 
-        //add ambient light
         var light = new THREE.AmbientLight(0xffffff,0.5);
         light.name = 'ambient';
         scene.add(light);
 
         //CUBE
+        var cubeDefaultTexture = 'starburst.jpg';
         var cubeMaterial = new THREE.MeshPhongMaterial({
             color: 0xFFFFFF,
             //wireframe: false, //mozna zobaczyc same krawedzie
-            map: new THREE.TextureLoader().load('starburst.jpg'),
-            roughness: 0.5,
-            metalness: 0.5,
+            map: new THREE.TextureLoader().load(cubeDefaultTexture),
             shading: THREE.SmoothShading
         });
         var cubeGeometry = new THREE.BoxGeometry(10,10,10);
         var cube = new THREE.Mesh(cubeGeometry,cubeMaterial);
         cube.position.set(0,10,0);
         cube.castShadow = true;
+        cube.receiveShadow = false;
         scene.add(cube);
-
 
 
         //GROUND PLANE
         var planeGeometry = new THREE.PlaneGeometry(60, 50);
+        var planeDefaultTexture = 'wood2.jpg';
         var planeMaterial = new THREE.MeshPhongMaterial({
             color: 0xFFC010,
-            map: new THREE.TextureLoader().load('wood2.jpg', function ( texture ) {
+            map: new THREE.TextureLoader().load(planeDefaultTexture, function ( texture ) {
                 texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
                 texture.offset.set( 0, 0 );
                 texture.repeat.set( 2, 1 );
             }),
-            roughness: 0.5,
             shading: THREE.SmoothShading
         } );
         var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.castShadow = false;
         plane.receiveShadow = true;
         plane.position.set(0,-2,0);
         plane.rotation.x = -0.5 * Math.PI;
@@ -111,24 +113,37 @@
         stats.showPanel(0);
         document.body.appendChild( stats.dom );
 
-
         //CONTROL PANEL
-        // setup the control object for the control gui
         control = new function () {
             this.rotationSpeed = 1 ;
             this.spotLightColor = spotLight.color.getHex();
             this.ambientLightColor = light.color.getHex();
+            this.cubeTexturePath = cubeDefaultTexture;
+
+            this.uploadImage = function() {
+                var input = document.getElementById('img-path');
+                input.addEventListener('change', function() {
+                    var file = input.files[0];
+                    control.cubeTexturePath = file.name;
+                    cube.material.map = new THREE.TextureLoader().load(control.cubeTexturePath, function ( texture ) {
+                            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                            texture.offset.set( 0, 0 );
+                            texture.repeat.set( 2, 1 );
+                        })
+                });
+                input.click();
+            };
         };
 
         function addControlGui(controlObject) {
             var gui = new dat.GUI();
-            gui.add(controlObject, 'rotationSpeed', 0, 10);
+            gui.add(controlObject, 'cubeTexturePath');
+            gui.add(controlObject, 'uploadImage');
+            gui.add(controlObject, 'rotationSpeed', 0, 50);
             gui.addColor(controlObject, 'spotLightColor');
             gui.addColor(controlObject, 'ambientLightColor');
         }
-
         addControlGui(control);
-
 
         var update = function ()
         {
@@ -142,27 +157,20 @@
             renderer.render(scene, camera);
         };
 
-
         var GameLoop = function () {
             stats.begin();
             requestAnimationFrame( GameLoop);
             controls.update(); // required if controls.enableDamping = true, or if controls.autoRotate = true
-
-            // update data from controlds
             scene.getObjectByName('ambient').color = new THREE.Color(control.ambientLightColor);
             scene.getObjectByName('spot').color = new THREE.Color(control.spotLightColor);
             rotationSpeed = control.rotationSpeed;
-
             update();
             render();
             stats.end();
         };
 
-
         GameLoop();
 
     </script>
-
-
 </body>
 </html>
